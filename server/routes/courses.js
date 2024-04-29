@@ -2,6 +2,14 @@ import { Router } from "express";
 import mysql from "mysql2";
 import dbConfig from "../../db-connect.js";
 
+import {
+  getAllCourses,
+  getCourseById,
+  createCourse,
+  updateCourseById,
+  deleteCourseById,
+} from "../controllers/coursesController.js";
+
 const coursesRouter = Router();
 
 // Fetch all courses

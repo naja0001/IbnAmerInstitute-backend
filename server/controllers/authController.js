@@ -1,59 +1,53 @@
-import bcrypt from "bcryptjs";
+import userModel from "../models/authModel.js";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
-const loginUser = async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const user = await User.findOne({ username });
-
-    if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
-      return res.status(401).json({ message: "Invalid credentials" });
+const authController = {
+  login: async function (req, res) {
+    const { email, password } = req.body;
+    try {
+      const result = await userModel.findUserByEmail(email);
+      if (result.length > 0) {
+        const user = result[0];
+        const isMatch = await bcrypt.compare(password, user.passwordHash);
+        if (isMatch) {
+          const token = jwt.sign(
+            { role: "teachers", email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+          );
+          res.cookie("token", token, { httpOnly: true });
+          res.json({ loginStatus: true });
+        } else {
+          res.json({ loginStatus: false, Error: "Wrong email or password" });
+        }
+      } else {
+        res.json({ loginStatus: false, Error: "User not found" });
+      }
+    } catch (err) {
+      console.error(err);
+      res.json({ loginStatus: false, Error: "Query error" });
     }
+  },
 
-    const token = jwt.sign(
-      { userId: user.id, username: user.username },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    res.json({ token });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-};
-
-const registerUser = async (req, res) => {
-  try {
+  register: async function (req, res) {
     const { username, password } = req.body;
-    const existingUser = await User.findOne({ username });
-
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+    if (!username || !password) {
+      return res.status(400).send("Username and password are required");
     }
+    try {
+      const result = await userModel.createUser(username, password);
+      res.status(201).send("User created successfully");
+    } catch (err) {
+      console.error("Error during registration:", err);
+      res.status(500).send("Server error during registration");
+    }
+  },
 
-    const passwordHash = bcrypt.hashSync(password, 10);
-    const newUser = new User({ username, passwordHash });
-    await newUser.save();
-
-    res.status(201).json({ message: "User created successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
+  logout: function (req, res) {
+    res.clearCookie("token", { httpOnly: true, secure: true, path: "/" });
+    res.status(200).json({ status: "Success", message: "Logout successful" });
+  },
 };
 
-const logoutUser = async (req, res) => {
-  try {
-    // Clear the token stored on the client side
-    res.clearCookie("token");
-
-    // Optionally, you can send a response indicating successful logout
-    res.status(200).json({ message: "Logout successful" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-};
-
-export { loginUser, registerUser, logoutUser };
+export { authController };

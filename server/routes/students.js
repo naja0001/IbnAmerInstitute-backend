@@ -2,6 +2,14 @@ import { Router } from "express";
 import mysql from "mysql2";
 import dbConfig from "../../db-connect.js";
 
+import {
+  getAllStudents,
+  getStudentById,
+  createStudent,
+  updateStudentById,
+  deleteStudentById,
+} from "../controllers/studentsController.js";
+
 const studentsRouter = Router();
 
 // Fetch all students

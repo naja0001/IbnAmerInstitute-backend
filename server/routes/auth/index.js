@@ -4,44 +4,55 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import mysql from "mysql2";
 
+import { authController } from "../../controllers/authController.js";
+
 const authRouter = Router();
 
-authRouter.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+authRouter.post("/login", (req, res) => {
+  const { email, password } = req.body;
+  const sql = "SELECT * FROM login WHERE email = ?";
 
-  const queryString = "SELECT * FROM Users WHERE username = ?";
-
-  dbConfig.query(queryString, [username], (err, results) => {
+  dbConfig.query(sql, [email], (err, result) => {
     if (err) {
-      console.error("Database error:", err);
-      res
+      console.error(err);
+      return res
         .status(500)
-        .json({ error: "An error occurred while fetching user data" });
-      return;
+        .json({ loginStatus: false, Error: "Database query error" });
     }
 
-    if (results.length > 0) {
-      const user = results[0]; // Get the first result of the query
-      if (bcrypt.compareSync(password, user.passwordHash)) {
-        // Correct password, create JWT
-        const token = jwt.sign(
-          { userId: user.id, username: user.username },
-          process.env.JWT_SECRET,
-          { expiresIn: "1h" }
-        );
-        res.json({ token });
-      } else {
-        // Incorrect password
-        res.status(401).send("Invalid credentials");
-      }
+    if (result.length > 0) {
+      const user = result[0];
+      bcrypt.compare(password, user.passwordHash, (err, isMatch) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({
+            loginStatus: false,
+            Error: "Error verifying password",
+          });
+        }
+        if (isMatch) {
+          const token = jwt.sign(
+            { role: "teachers", email: user.email },
+            "jwt_secret_key",
+            { expiresIn: "1d" }
+          );
+          res.cookie("token", token, { httpOnly: true });
+          return res.json({ loginStatus: true });
+        } else {
+          return res.status(401).json({
+            loginStatus: false,
+            Error: "Incorrect credentials",
+          });
+        }
+      });
     } else {
-      // No user found
-      res.status(404).send("User not found");
+      return res
+        .status(401)
+        .json({ loginStatus: false, Error: "User not found" });
     }
   });
 });
 
-// Route for user registration
 authRouter.post("/register", async (req, res) => {
   const { username, password } = req.body;
 
@@ -49,35 +60,36 @@ authRouter.post("/register", async (req, res) => {
     return res.status(400).send("Username and password are required");
   }
 
-  const salt = bcrypt.genSaltSync(10);
-  const passwordHash = bcrypt.hashSync(password, salt);
+  try {
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
 
-  const insertQuery =
-    "INSERT INTO Users (username, passwordHash) VALUES (?, ?)";
+    const insertQuery =
+      "INSERT INTO Users (username, passwordHash) VALUES (?, ?)";
 
-  dbConfig.query(insertQuery, [username, passwordHash], (err, result) => {
-    if (err) {
-      console.error("Database error:", err);
-      res
-        .status(500)
-        .json({ error: "An error occurred while creating the user" });
-      return;
-    }
-    res.status(201).send("User created successfully");
-  });
+    dbConfig.query(insertQuery, [username, passwordHash], (err, result) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res
+          .status(500)
+          .json({ error: "An error occurred while creating the user" });
+      }
+      res.status(201).send("User created successfully");
+    });
+  } catch (error) {
+    console.error("Error during registration:", error);
+    res.status(500).send("Server error during registration");
+  }
 });
 
-authRouter.post("/logout", (req, res) => {
-  const userId = req.userId; // Assuming you extract the user ID from the request
-  // Call the logout method from the Auth model
-  Auth.logout(userId, (error, result) => {
-    if (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Internal Server Error" });
-    }
-    // Send a response indicating successful logout
-    return res.status(200).json({ message: "Logout successful" });
+authRouter.get("/logout", (req, res) => {
+  console.log("Logout route hit");
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    path: "/",
   });
+  res.status(200).json({ status: "Success", message: "Logout successful" });
 });
 
 export default authRouter;

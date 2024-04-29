@@ -1,5 +1,5 @@
 // controllers/teacherController.js
-import Teacher from "../models/Teachers.js";
+import Teacher from "../models/teachersModel.js";
 
 const getAllTeachers = (req, res) => {
   Teacher.getAll((err, teachers) => {

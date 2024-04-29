@@ -2,6 +2,14 @@ import { Router } from "express";
 import mysql from "mysql2";
 import dbConfig from "../../db-connect.js";
 
+import {
+  getAllAttendances,
+  getAttendanceById,
+  createAttendance,
+  updateAttendanceById,
+  deleteAttendanceById,
+} from "../controllers/attendanceController.js";
+
 const attendanceRouter = Router();
 
 attendanceRouter.get("/", (req, res) => {
@@ -33,8 +41,6 @@ attendanceRouter.get("/:id", (req, res) => {
   });
 });
 
-// Fetch the history for a specific student's attendance
-// Fetch the history for a specific student's attendance
 attendanceRouter.get("/:id/history", (req, res) => {
   const studentId = req.params.id;
   const queryString =

@@ -1,5 +1,5 @@
 import dbConfig from "../../db-connect.js";
-import Attendance from "../models/attendance.js";
+import Attendance from "../models/attendanceModel.js";
 
 const getAllAttendances = async (req, res) => {
   try {
