@@ -23,7 +23,6 @@ app.use(
     origin: "https://thankful-dune-048548c03.5.azurestaticapps.net", // Ensure this exactly matches the client's origin
     methods: ["GET", "POST", "PUT", "DELETE"], // Adjust according to your needs
     credentials: true, // if you are using cookies or authentication
-    allowedHeaders: ["Content-Type", "Authorization"], // Customize based on your requirements
   })
 );
 app.use("/auth", authRouter);
