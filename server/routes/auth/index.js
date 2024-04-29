@@ -9,46 +9,23 @@ import { authController } from "../../controllers/authController.js";
 const authRouter = Router();
 
 authRouter.post("/login", (req, res) => {
-  const { email, password } = req.body;
-  const sql = "SELECT * FROM login WHERE email = ?";
-
-  dbConfig.query(sql, [email], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res
-        .status(500)
-        .json({ loginStatus: false, Error: "Database query error" });
-    }
-
+  const { email, password } = req.body; // Destructure email and password from req.body
+  const sql = "SELECT * from login Where email = ? and password = ?";
+  console.log("SQL Query:", sql);
+  // Pass email and password directly as an array to dbConfig.query
+  dbConfig.query(sql, [email, password], (err, result) => {
+    if (err) return res.json({ loginStatus: false, Error: "Query error" });
     if (result.length > 0) {
-      const user = result[0];
-      bcrypt.compare(password, user.passwordHash, (err, isMatch) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({
-            loginStatus: false,
-            Error: "Error verifying password",
-          });
-        }
-        if (isMatch) {
-          const token = jwt.sign(
-            { role: "teachers", email: user.email },
-            "jwt_secret_key",
-            { expiresIn: "1d" }
-          );
-          res.cookie("token", token, { httpOnly: true });
-          return res.json({ loginStatus: true });
-        } else {
-          return res.status(401).json({
-            loginStatus: false,
-            Error: "Incorrect credentials",
-          });
-        }
-      });
+      const email = result[0].email;
+      const token = jwt.sign(
+        { role: "teachers", email: email },
+        "jwt_secret_key",
+        { expiresIn: "1d" }
+      );
+      res.cookie("token", token);
+      return res.json({ loginStatus: true });
     } else {
-      return res
-        .status(401)
-        .json({ loginStatus: false, Error: "User not found" });
+      return res.json({ loginStatus: false, Error: "wrong email or password" });
     }
   });
 });

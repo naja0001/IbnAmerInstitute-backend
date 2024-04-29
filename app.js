@@ -30,7 +30,6 @@ app.use("/auth", authRouter);
 app.use("/students", studentsRouter);
 app.use("/teachers", teachersRouter);
 app.use("/attendance", attendanceRouter);
-
 app.use("/homework", homeworkRouter);
 app.use("/courses", coursesRouter);
 app.use("/classes", classesRouter);
